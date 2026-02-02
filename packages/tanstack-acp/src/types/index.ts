@@ -4,7 +4,8 @@
  * TypeScript type definitions for the TanStack AI ACP adapter
  */
 
-import type { Message } from '@tanstack/ai';
+import type { UIMessage } from '@tanstack/ai';
+import type { AcpConnection } from '../acp-connection.js'
 import type {
   NewSessionRequest,
   NewSessionResponse,
@@ -93,8 +94,7 @@ export interface AcpSessionOptions {
   onError?: (error: Error) => void
 }
 
-// Forward declaration
-export type { AcpConnection } from '../acp-connection.js'
+// Forward declaration - AcpConnection imported at top of file
 
 // ACP Session hook return value
 export interface AcpSessionReturn {
@@ -114,7 +114,7 @@ export interface AcpSessionReturn {
   
   // Session actions
   createSession: (params?: Partial<NewSessionRequest> & { modelId?: string }) => Promise<NewSessionResponse>
-  loadSession: (sessionId: string, params?: Partial<LoadSessionRequest>) => Promise<LoadSessionResponse & { messages: Message[]; sessionData: SessionData | null }>
+  loadSession: (sessionId: string, params?: Partial<LoadSessionRequest>) => Promise<LoadSessionResponse & { messages: UIMessage[]; sessionData: SessionData | null }>
   deleteSession: (sessionId: string) => Promise<void>
   forkSession: (sessionId: string) => Promise<ForkSessionResponse>
   duplicateSession: (sessionId: string) => Promise<void>
@@ -141,7 +141,7 @@ export interface AcpSessionReturn {
   persistence: SessionPersistence
   
   // Helper methods
-  appendMessage: (message: Message) => Promise<void>
+  appendMessage: (message: UIMessage) => Promise<void>
 }
 
 // Adapter options

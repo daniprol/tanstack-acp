@@ -4,8 +4,20 @@
  * Default persistence provider that stores sessions in memory
  */
 
-import type { Message } from '@tanstack/ai';
+import type { UIMessage } from '@tanstack/ai';
 import type { SessionData, SessionMetadata, SessionPersistence } from './types.js';
+
+function getMessageTextContent(message: UIMessage): string {
+  // UIMessage uses parts array instead of content property
+  const parts = (message as unknown as { parts?: Array<{ type: string; text?: string }> }).parts;
+  if (parts && Array.isArray(parts)) {
+    return parts
+      .filter((part) => part.type === 'text')
+      .map((part) => part.text || '')
+      .join('');
+  }
+  return '';
+}
 
 export class MemoryPersistence implements SessionPersistence {
   private sessions = new Map<string, SessionData>();
@@ -33,12 +45,12 @@ export class MemoryPersistence implements SessionPersistence {
     this.sessions.delete(sessionId);
   }
 
-  async getMessages(sessionId: string): Promise<Message[]> {
+  async getMessages(sessionId: string): Promise<UIMessage[]> {
     const session = this.sessions.get(sessionId);
     return session?.messages || [];
   }
 
-  async appendMessage(sessionId: string, message: Message): Promise<void> {
+  async appendMessage(sessionId: string, message: UIMessage): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (session) {
       session.messages.push(message);
@@ -47,15 +59,11 @@ export class MemoryPersistence implements SessionPersistence {
       
       // Auto-update title and preview if first message
       if (session.messages.length === 1 && message.role === 'user') {
-        const content = typeof message.content === 'string' 
-          ? message.content 
-          : 'New conversation';
+        const content = getMessageTextContent(message) || 'New conversation';
         session.title = this.generateTitle(content);
         session.lastMessagePreview = content.slice(0, 100);
       } else if (message.role === 'user') {
-        const content = typeof message.content === 'string' 
-          ? message.content 
-          : '';
+        const content = getMessageTextContent(message);
         session.lastMessagePreview = content.slice(0, 100);
         session.updatedAt = new Date();
       }

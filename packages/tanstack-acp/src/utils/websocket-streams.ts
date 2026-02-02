@@ -5,8 +5,6 @@
  * Uses native browser Streams API
  */
 
-import type { ReadableStream, WritableStream } from 'node:stream/web'
-
 export interface NodeReadableStream extends ReadableStream<Uint8Array> {
   values(): AsyncGenerator<Uint8Array, undefined, unknown>
   [Symbol.asyncIterator](): AsyncGenerator<Uint8Array, undefined, unknown>

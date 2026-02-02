@@ -4,7 +4,7 @@
  * TypeScript type definitions for session persistence
  */
 
-import type { Message } from '@tanstack/ai';
+import type { UIMessage } from '@tanstack/ai';
 
 export interface SessionMetadata {
   id: string;
@@ -20,7 +20,7 @@ export interface SessionMetadata {
 }
 
 export interface SessionData extends SessionMetadata {
-  messages: Message[];
+  messages: UIMessage[];
   metadata?: Record<string, unknown>;
 }
 
@@ -39,8 +39,8 @@ export interface SessionPersistence {
   deleteSession(sessionId: string): Promise<void>;
   
   // Messages/History
-  getMessages(sessionId: string): Promise<Message[]>;
-  appendMessage(sessionId: string, message: Message): Promise<void>;
+  getMessages(sessionId: string): Promise<UIMessage[]>;
+  appendMessage(sessionId: string, message: UIMessage): Promise<void>;
   clearMessages(sessionId: string): Promise<void>;
   
   // Fork/Duplicate

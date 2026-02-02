@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import type { Message } from '@tanstack/ai'
+import type { UIMessage } from '@tanstack/ai'
 import { AcpConnection } from '../acp-connection.js'
 import { Deferred } from '../utils/deferred.js'
 import { MemoryPersistence } from '../persistence/memory.js'
@@ -15,21 +15,14 @@ import type {
   AcpSessionReturn,
   ConnectionState,
   IdentifiedPermissionRequest,
-  Session,
-  LifecycleCallback,
 } from '../types/index.js'
-import type { SessionPersistence, SessionMetadata, SessionData } from '../persistence/types.js'
+import type { SessionMetadata, SessionData } from '../persistence/types.js'
 import type {
   NewSessionRequest,
-  NewSessionResponse,
   LoadSessionRequest,
-  LoadSessionResponse,
-  SetSessionModeRequest,
-  SetSessionModeResponse,
   RequestPermissionRequest,
   RequestPermissionResponse,
   SessionMode,
-  PromptResponse,
 } from '@agentclientprotocol/sdk'
 
 export function useAcpSession(options: AcpSessionOptions): AcpSessionReturn {
@@ -169,7 +162,7 @@ export function useAcpSession(options: AcpSessionOptions): AcpSessionReturn {
           agentName: options.agentName,
           wsUrl: options.wsUrl,
           modeId: result.modes?.currentModeId,
-          modelId: params?.modelId,
+          modelId: (params as Record<string, unknown>)?.modelId as string | undefined,
         }
         
         await persistence.saveSession(result.sessionId, sessionData)
@@ -205,6 +198,7 @@ export function useAcpSession(options: AcpSessionOptions): AcpSessionReturn {
         const result = await connection.loadSession({
           sessionId,
           cwd: params?.cwd || options.cwd || '/tmp',
+          mcpServers: params?.mcpServers || [],
         })
 
         // Load from persistence
@@ -242,7 +236,10 @@ export function useAcpSession(options: AcpSessionOptions): AcpSessionReturn {
       if (!connection) throw new Error('Not connected')
       
       try {
-        const result = await connection.forkSession({ sessionId })
+        const result = await connection.forkSession({
+          sessionId,
+          cwd: options.cwd || '/tmp',
+        })
         await persistence.forkSession(sessionId, result.sessionId)
         
         const updatedSessions = await persistence.listSessions()
@@ -368,7 +365,7 @@ export function useAcpSession(options: AcpSessionOptions): AcpSessionReturn {
     persistence,
     
     // Helper to append message to active session
-    appendMessage: async (message: Message) => {
+    appendMessage: async (message: UIMessage) => {
       if (activeSessionId) {
         await persistence.appendMessage(activeSessionId, message)
         const updated = await persistence.getSession(activeSessionId)

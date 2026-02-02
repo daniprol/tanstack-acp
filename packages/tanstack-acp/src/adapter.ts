@@ -6,8 +6,7 @@
  */
 
 import { stream, type ConnectionAdapter } from '@tanstack/ai-react'
-import type { ModelMessage, StreamChunk } from '@tanstack/ai'
-import { AcpConnection } from './acp-connection.js'
+import type { ModelMessage } from '@tanstack/ai'
 import type { AcpAdapterOptions } from './types/index.js'
 
 export function createAcpAdapter(options: AcpAdapterOptions): ConnectionAdapter {
@@ -17,10 +16,9 @@ export function createAcpAdapter(options: AcpAdapterOptions): ConnectionAdapter 
     throw new Error('AcpConnection is required')
   }
 
-  return stream(async (messages: ModelMessage[], data?: Record<string, unknown>, signal?: AbortSignal) => {
+  const streamFn = async function* (messages: ModelMessage[], _data?: Record<string, unknown>, signal?: AbortSignal) {
     // Determine which session to use
     let currentSessionId = sessionId
-    let isNewSession = false
 
     // Auto-create session if none provided
     if (!currentSessionId) {
@@ -29,7 +27,6 @@ export function createAcpAdapter(options: AcpAdapterOptions): ConnectionAdapter 
         mcpServers: sessionParams?.mcpServers || [],
       })
       currentSessionId = session.sessionId
-      isNewSession = true
       onSessionCreated?.(session.sessionId)
     } else {
       onSessionLoaded?.(currentSessionId)
@@ -44,43 +41,41 @@ export function createAcpAdapter(options: AcpAdapterOptions): ConnectionAdapter 
     // Send prompt (notifications come via sessionUpdate)
     await connection.prompt(currentSessionId, acpPrompt)
 
-    // Create stream from ACP connection
-    return new ReadableStream<StreamChunk>({
-      async start(controller) {
-        try {
-          for await (const chunk of connection.streamChunks(signal)) {
-            if (signal?.aborted) {
-              // Send cancel notification
-              try {
-                await connection.cancel(currentSessionId!)
-              } catch {
-                // Ignore cancel errors
-              }
-              break
-            }
-
-            const streamChunk = convertToStreamChunk(chunk)
-            if (streamChunk) {
-              controller.enqueue(streamChunk)
-            }
+    // Stream chunks from ACP connection
+    try {
+      for await (const chunk of connection.streamChunks(signal)) {
+        if (signal?.aborted) {
+          // Send cancel notification
+          try {
+            await connection.cancel(currentSessionId!)
+          } catch {
+            // Ignore cancel errors
           }
-          controller.close()
-        } catch (error) {
-          controller.error(error)
+          break
         }
-      },
-      cancel() {
-        // Send cancel notification when stream is cancelled
-        connection.cancel(currentSessionId!).catch(() => {
-          // Ignore cancel errors
-        })
-        connection.closeStream()
-      },
-    })
-  })
+
+        const streamChunk = convertToStreamChunk(chunk)
+        if (streamChunk) {
+          yield streamChunk as any
+        }
+      }
+    } catch (error) {
+      // Send cancel notification on error
+      connection.cancel(currentSessionId!).catch(() => {
+        // Ignore cancel errors
+      })
+      connection.closeStream()
+      throw error
+    }
+
+    // Clean up stream when done
+    connection.closeStream()
+  }
+
+  return stream(streamFn as any)
 }
 
-function convertToStreamChunk(chunk: unknown): StreamChunk | null {
+function convertToStreamChunk(chunk: unknown): Record<string, unknown> | null {
   if (!chunk || typeof chunk !== 'object') return null
 
   const c = chunk as Record<string, unknown>
@@ -88,21 +83,21 @@ function convertToStreamChunk(chunk: unknown): StreamChunk | null {
   switch (c.type) {
     case 'text':
       return {
-        type: 'text',
+        type: 'TEXT_MESSAGE_CONTENT',
         id: String(c.id || ''),
         delta: String(c.delta || ''),
       }
 
     case 'reasoning':
       return {
-        type: 'reasoning',
+        type: 'REASONING',
         id: String(c.id || ''),
         reasoning: String(c.reasoning || ''),
       }
 
     case 'tool-call':
       return {
-        type: 'tool-call',
+        type: 'TOOL_CALL_ARGS',
         id: String(c.id || ''),
         toolCallId: String(c.toolCallId || ''),
         toolName: String(c.toolName || ''),
@@ -111,7 +106,7 @@ function convertToStreamChunk(chunk: unknown): StreamChunk | null {
 
     case 'tool-result':
       return {
-        type: 'tool-result',
+        type: 'TOOL_CALL_END',
         id: String(c.id || ''),
         toolCallId: String(c.toolCallId || ''),
         result: c.result,
@@ -119,7 +114,7 @@ function convertToStreamChunk(chunk: unknown): StreamChunk | null {
 
     case 'data':
       return {
-        type: 'data',
+        type: 'CUSTOM',
         data: c.data,
       }
 

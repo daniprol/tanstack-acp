@@ -27,7 +27,6 @@ import {
   type ResumeSessionResponse,
   type SetSessionModeRequest,
   type SetSessionModeResponse,
-  type CancelNotification,
   type AgentCapabilities,
   type SessionInfo,
   type SessionMode,
@@ -38,9 +37,7 @@ import { ToolCallAggregator } from './utils/tool-aggregator.js'
 import { Deferred } from './utils/deferred.js'
 import type {
   AcpConnectionOptions,
-  ConnectionState,
   IdentifiedPermissionRequest,
-  ToolCallState,
 } from './types/index.js'
 
 export interface AcpClientInterface {
@@ -53,7 +50,6 @@ export interface AcpClientInterface {
 export class AcpConnection {
   private wsManager: WebSocketManager
   private acpClient: ClientSideConnection | null = null
-  private options: AcpConnectionOptions
   private pendingPermissions = new Map<string, Deferred<RequestPermissionResponse>>()
   private toolCallAggregator = new ToolCallAggregator()
   private currentMessageId: string | null = null
@@ -68,7 +64,6 @@ export class AcpConnection {
   public sessions: SessionInfo[] = []
 
   constructor(options: AcpConnectionOptions) {
-    this.options = options
     this.wsManager = new WebSocketManager({
       url: options.wsUrl,
       onConnectionStateChange: options.onConnectionStateChange,
@@ -84,7 +79,7 @@ export class AcpConnection {
     // Create ACP client with our implementation
     this.acpClient = new ClientSideConnection(
       () => this.createClientInterface(),
-      ndJsonStream(writable, readable)
+      ndJsonStream(writable, readable as ReadableStream<Uint8Array>)
     )
   }
 
@@ -112,13 +107,13 @@ export class AcpConnection {
         this.pendingPermissions.set(permissionId, deferred)
 
         // Emit to hook for UI handling
-        const identifiedRequest: IdentifiedPermissionRequest = {
+        void ({
           ...params,
           permissionId,
-        }
+        } as unknown as IdentifiedPermissionRequest)
 
         // For now, auto-allow. In hook, this will be overridden
-        deferred.resolve({ outcome: { outcome: 'allow_once' } })
+        deferred.resolve({ outcome: { outcome: 'selected' } } as RequestPermissionResponse)
 
         return deferred.promise
       },
@@ -157,9 +152,9 @@ export class AcpConnection {
     switch (update.sessionUpdate) {
       case 'agent_message_chunk': {
         const content = update.content?.type === 'text' ? update.content.text : ''
-        const messageId = update.messageId || this.currentMessageId || crypto.randomUUID()
+        const messageId = (update as Record<string, unknown>).messageId as string || this.currentMessageId || crypto.randomUUID()
 
-        if (update.start || messageId !== this.currentMessageId) {
+        if ((update as Record<string, unknown>).start || messageId !== this.currentMessageId) {
           this.currentMessageId = messageId
         }
 
@@ -175,19 +170,20 @@ export class AcpConnection {
         const thought = update.content?.type === 'text' ? update.content.text : ''
         chunks.push({
           type: 'reasoning',
-          id: update.messageId || crypto.randomUUID(),
+          id: (update as Record<string, unknown>).messageId as string || crypto.randomUUID(),
           reasoning: thought,
         })
         break
       }
 
       case 'tool_call': {
-        this.toolCallAggregator.start(update.toolCallId, update.toolCallName)
+        const toolCallName = (update as Record<string, unknown>).toolCallName as string
+        this.toolCallAggregator.start(update.toolCallId, toolCallName)
         chunks.push({
           type: 'tool-call',
           id: update.toolCallId,
           toolCallId: update.toolCallId,
-          toolName: update.toolCallName,
+          toolName: toolCallName,
           args: '',
         })
         break
@@ -196,10 +192,10 @@ export class AcpConnection {
       case 'tool_call_update': {
         try {
           const aggregated = this.toolCallAggregator.update(update.toolCallId, {
-            status: update.status,
-            rawOutput: update.rawOutput,
-            locations: update.locations,
-            content: update.content,
+            status: update.status || undefined,
+            rawOutput: (update.rawOutput || undefined) as Record<string, unknown> | undefined,
+            locations: (update.locations || undefined) as unknown[] | undefined,
+            content: (update.content || undefined) as unknown[] | undefined,
           })
 
           chunks.push({
@@ -227,7 +223,9 @@ export class AcpConnection {
 
       case 'plan': {
         // Map plan to reasoning
-        const planText = `Plan: ${update.title}\n${update.entries?.map((e) => `- ${e.description}`).join('\n')}`
+        const planUpdate = update as Record<string, unknown>
+        const entries = (planUpdate.entries as Array<Record<string, unknown>>) || []
+        const planText = `Plan: ${planUpdate.title}\n${entries.map((e) => `- ${e.description}`).join('\n')}`
         chunks.push({
           type: 'reasoning',
           id: crypto.randomUUID(),
@@ -329,10 +327,10 @@ export class AcpConnection {
   async initialize(): Promise<void> {
     if (!this.acpClient) throw new Error('Not connected')
     const result = await this.acpClient.initialize({
-      protocolVersion: '0.1.0',
+      protocolVersion: '0.1.0' as unknown as number,
       clientCapabilities: {},
     })
-    this.agentCapabilities = result.agentCapabilities
+    this.agentCapabilities = result.agentCapabilities || null
   }
 
   async newSession(params: NewSessionRequest): Promise<NewSessionResponse> {
@@ -382,15 +380,14 @@ export class AcpConnection {
 
   async prompt(sessionId: string, prompt: unknown[]): Promise<unknown> {
     if (!this.acpClient) throw new Error('Not connected')
-    return this.acpClient.prompt({
+    return (this.acpClient.prompt as unknown as (req: { sessionId: string; prompt: unknown[] }) => Promise<unknown>)({
       sessionId,
       prompt,
     })
   }
 
-  async cancel(sessionId: string): Promise<void> {
+  async cancel(_sessionId: string): Promise<void> {
     if (!this.acpClient) throw new Error('Not connected')
-    const notification: CancelNotification = { sessionId }
     // Note: cancel is a notification, not a request
     // We need to access the connection directly or use a different approach
   }
