@@ -1,7 +1,7 @@
 {
   "name": "tanstack-acp",
   "version": "0.1.0",
-  "description": "TanStack AI adapter for Agent Client Protocol (ACP)",
+  "description": "TanStack AI adapter for Agent Client Protocol (ACP). Connect your React apps to ACP-compatible AI agents over WebSocket.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -17,6 +17,9 @@
     "dist",
     "README.md"
   ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --clean --out-dir dist",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch --out-dir dist",
@@ -30,8 +33,8 @@
   "peerDependencies": {
     "@tanstack/ai": "^0.3.0",
     "@tanstack/ai-react": "^0.3.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -58,11 +61,18 @@
     "agent",
     "protocol",
     "websocket",
-    "chat"
+    "chat",
+    "llm",
+    "react"
   ],
+  "author": "",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/tanstack-acp.git"
-  }
+    "url": "https://github.com/daniprol/tanstack-acp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/daniprol/tanstack-acp/issues"
+  },
+  "homepage": "https://github.com/daniprol/tanstack-acp"
 }

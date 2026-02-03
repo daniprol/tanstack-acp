@@ -1,55 +1,67 @@
 # TanStack ACP Demo
 
-A beautiful, world-class demo application for the TanStack ACP library featuring a modern AI chat interface with full Agent Client Protocol support.
+A complete demonstration application showcasing the tanstack-acp library. This app connects to ACP-compatible AI agents and provides a full chat interface with session management.
 
-## ✨ Features
+## What This Is
 
-### Design
-- **Zinc Theme**: Professional zinc base with blue brand accents
-- **Mobile-First**: Fully responsive from mobile to desktop
-- **Subtle Animations**: Smooth transitions and micro-interactions
-- **Dark Mode**: Full dark mode support via CSS variables
+This demo app shows how to build a production-ready AI chat interface using tanstack-acp. It demonstrates best practices for:
 
-### Functionality
-- **Multiple Agents**: OpenCode (default), Claude, Gemini, Codex, Custom
-- **Session Management**: Create, load, fork, duplicate, delete conversations
-- **Smart Grouping**: Sessions grouped by date (Today, Yesterday, Last 7 Days, Older)
-- **Model Selection**: Choose between Default, Fast, Powerful, Creative, Precise
-- **Real-time Chat**: Full streaming support with typing indicators
-- **Permission Handling**: UI for agent permission requests
-- **Toast Notifications**: Beautiful feedback for all actions
+- Connecting to ACP agents
+- Managing chat sessions
+- Handling permission requests
+- Building a responsive UI with TanStack AI
 
-### Components
-- **Layout**: Responsive sidebar with mobile sheet, sticky header
-- **Connection**: Status indicators, agent selector, connect/disconnect
-- **Sessions**: Searchable list with collapsible groups, context menus
-- **Chat**: Message display, input with model selector, typing animation
+## Features
 
-## 🚀 Quick Start
+**Agent Connection:**
+- Connect to multiple ACP agents (OpenCode, Claude Code, Gemini CLI, Codex, Custom)
+- Auto-reconnection with status indicators
+- Easy agent switching
 
-### 1. Start an Agent
+**Session Management:**
+- Create, load, fork, duplicate, and delete sessions
+- Sessions grouped by date (Today, Yesterday, Last 7 Days, Older)
+- Search through sessions
+- Mode switching (Default, Fast, Powerful, Creative, Precise)
+
+**Chat Interface:**
+- Real-time streaming responses
+- Agent typing indicators
+- Model selection
+- Markdown-style message display
+- Reasoning display for agent thoughts
+
+**Permission Handling:**
+- UI for agent permission requests
+- Allow once, allow, or deny options
+- Visual feedback for pending permissions
+
+## Quick Start
+
+### 1. Start an ACP Agent
+
+Choose one of the following:
 
 ```bash
-# Option 1: OpenCode (default)
+# OpenCode (recommended for testing)
 npx -y stdio-to-ws "npx opencode@latest" --port 3000
 
-# Option 2: Claude Code
+# Claude Code
 npx -y stdio-to-ws "npx @anthropic-ai/claude-code-acp" --port 3003
 
-# Option 3: Gemini CLI
+# Gemini CLI
 npx -y stdio-to-ws "npx @google/gemini-cli@latest --experimental-acp" --port 3004
 ```
 
 ### 2. Run the Demo
 
 ```bash
-# Navigate to demo
+# From the monorepo root:
+pnpm demo
+
+# Or navigate directly:
 cd examples/demo
-
-# Install dependencies (if needed)
 pnpm install
-
-# Start dev server
 pnpm dev
 ```
 
@@ -57,100 +69,125 @@ pnpm dev
 
 Navigate to `http://localhost:5173`
 
-## 🎨 Design System
+## Usage Flow
 
-### Colors
-- **Primary**: Zinc grays for UI, Blue (#2563eb) for brand/actions
-- **Success**: Green for connected states
-- **Warning**: Amber for loading/connecting states
-- **Error**: Red for error states
+1. **Select an agent** from the sidebar dropdown
+2. **Click "Connect to Agent"** to establish the WebSocket connection
+3. **Click "New Chat"** to create a session
+4. **Type a message** and press Enter or click Send
+5. **Manage sessions** using the sidebar:
+   - Switch between sessions
+   - Fork a session to explore a different direction
+   - Delete sessions you no longer need
 
-### Typography
-- **Font**: Inter (system fallback)
-- **Scale**: xs (12px) → 2xl (24px)
-- **Weights**: 400 (normal) → 700 (bold)
-
-### Spacing
-- **Base**: 4px grid system
-- **Components**: 8px-16px internal padding
-- **Sections**: 24px gaps
-
-### Animations
-- **Fast**: 150ms (hovers)
-- **Normal**: 200ms (transitions)
-- **Slow**: 300ms (page transitions)
-- **Easing**: cubic-bezier(0.4, 0, 0.2, 1)
-
-## 📱 Responsive Breakpoints
-
-- **Mobile**: < 768px (single column, sheet sidebar)
-- **Tablet**: 768px - 1024px (adjusted spacing)
-- **Desktop**: >= 1024px (full layout, fixed sidebar)
-
-## 🏗️ Architecture
+## Architecture
 
 ```
 src/
 ├── components/
-│   ├── layout/          # App shell components
-│   │   ├── app-header.tsx
-│   │   └── app-sidebar.tsx
-│   ├── connection/      # Connection management
-│   │   ├── agent-selector.tsx
-│   │   ├── connect-button.tsx
-│   │   ├── connection-panel.tsx
-│   │   └── connection-status.tsx
-│   ├── sessions/        # Session management
-│   │   ├── session-card.tsx
-│   │   ├── session-group.tsx
-│   │   ├── session-list.tsx
-│   │   ├── session-search.tsx
-│   │   └── sessions-panel.tsx
-│   ├── chat/           # Chat interface
-│   │   ├── chat-container.tsx
-│   │   ├── chat-input.tsx
-│   │   ├── empty-chat.tsx
-│   │   ├── message-item.tsx
-│   │   ├── message-list.tsx
-│   │   └── typing-indicator.tsx
-│   └── ui/             # shadcn components
+│   ├── layout/
+│   │   ├── app-header.tsx       # Top navigation bar
+│   │   └── app-sidebar.tsx       # Sidebar with agent selector
+│   ├── connection/
+│   │   ├── agent-selector.tsx   # Agent dropdown
+│   │   ├── connect-button.tsx    # Connect/disconnect button
+│   │   ├── connection-panel.tsx  # Connection management UI
+│   │   └── connection-status.tsx # Status indicator
+│   ├── sessions/
+│   │   ├── session-card.tsx      # Individual session item
+│   │   ├── session-group.tsx     # Date-grouped session list
+│   │   ├── session-list.tsx     # Full session sidebar
+│   │   ├── session-search.tsx    # Search input
+│   │   └── sessions-panel.tsx    # Sessions container
+│   ├── chat/
+│   │   ├── chat-container.tsx    # Main chat area
+│   │   ├── chat-input.tsx         # Message input form
+│   │   ├── empty-chat.tsx         # Empty state component
+│   │   ├── message-item.tsx       # Individual message
+│   │   ├── message-list.tsx       # Message thread display
+│   │   └── typing-indicator.tsx   # Agent typing animation
+│   └── ui/                        # Shared UI components
 ├── hooks/
-│   ├── use-app-chat.ts
-│   └── use-mobile.ts
+│   ├── use-app-chat.ts           # Chat logic hook
+│   └── use-mobile.ts             # Mobile detection hook
 ├── lib/
-│   └── utils.ts        # cn() helper
+│   └── utils.ts                   # Utility functions
 ├── types/
-│   └── index.ts        # TypeScript types
-└── App.tsx             # Main application
+│   └── index.ts                   # TypeScript types
+├── App.tsx                        # Main application component
+└── main.tsx                       # Entry point
 ```
 
-## 🎯 Usage Flow
+## Tech Stack
 
-1. **Open App**: See "Not Connected" state with prominent CTA
-2. **Select Agent**: Choose from dropdown (OpenCode default)
-3. **Connect**: Click "Connect to Agent" button
-4. **Create Session**: Click "New Conversation"
-5. **Chat**: Type messages, use Shift+Enter for new lines
-6. **Manage**: Use sidebar to switch/fork/delete sessions
+- **React 18** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **shadcn/ui** - Component library
+- **TanStack AI** - Chat state management
+- **TanStack ACP** - ACP protocol integration
+- **Sonner** - Toast notifications
 
-## 🛠️ Development
+## Development
 
-### Tech Stack
-- **React 18**: Functional components, hooks
-- **TypeScript**: Full type safety
-- **Vite**: Fast development build
-- **Tailwind CSS**: Utility-first styling
-- **shadcn/ui**: Beautiful, accessible components
-- **TanStack AI**: Chat state management
-- **TanStack ACP**: Agent Client Protocol integration
+```bash
+# Install dependencies
+pnpm install
 
-### Code Standards
-- 1 component per file
-- Proper TypeScript interfaces
-- Custom hooks for logic
-- Mobile-first responsive design
-- Accessible (ARIA labels, keyboard nav)
+# Start dev server
+pnpm dev
 
-## 📝 License
+# Build for production
+pnpm build
+
+# Type check
+pnpm lint
+```
+
+## Environment Variables
+
+No environment variables required. The app connects to agents via WebSocket URLs configured in the UI.
+
+## Integrations
+
+The demo supports these ACP-compatible agents:
+
+| Agent | WebSocket Port | Install Command |
+|-------|----------------|-----------------|
+| OpenCode | 3000 | `npx -y stdio-to-ws "npx opencode@latest" --port 3000` |
+| Claude Code | 3003 | `npx -y stdio-to-ws "npx @anthropic-ai/claude-code-acp" --port 3003` |
+| Gemini CLI | 3004 | `npx -y stdio-to-ws "npx @google/gemini-cli@latest --experimental-acp" --port 3004` |
+
+For custom agents, provide your own WebSocket URL.
+
+## Customization
+
+### Adding New Agents
+
+Edit `src/types/index.ts` to add agent configurations:
+
+```ts
+export const AGENT_CONFIGS = [
+  {
+    id: 'custom-agent',
+    name: 'Custom Agent',
+    wsUrl: 'ws://localhost:9000',
+    description: 'Your custom agent',
+  },
+  // ... existing agents
+]
+```
+
+### Styling
+
+The demo uses Tailwind CSS with a zinc color palette and blue accents. Customize in `tailwind.config.js`.
+
+## Related
+
+- [Core Library README](../../packages/tanstack-acp/README.md) - Full API documentation
+- [tanstack-acp on GitHub](https://github.com/daniprol/tanstack-acp)
+
+## License
 
 MIT

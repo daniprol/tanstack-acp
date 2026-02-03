@@ -1,25 +1,17 @@
 # tanstack-acp
 
-TanStack AI adapter for Agent Client Protocol (ACP)
+TanStack AI adapter for Agent Client Protocol (ACP). Connect your React apps to ACP-compatible AI agents over WebSocket.
 
-A minimal, zero-abstraction adapter that connects TanStack AI to ACP (Agent Client Protocol) agents over WebSockets.
+## Overview
 
-## Features
-
-- **Zero-abstraction design**: Uses TanStack AI's native `useChat` hook
-- **Full ACP protocol support**: Sessions, tool calls, permissions, file operations
-- **Session management**: Create, load, fork, and resume sessions
-- **WebSocket connection**: Auto-reconnection with configurable attempts
-- **Permission handling**: UI-friendly async permission resolution
-- **Tool call aggregation**: Merges progressive ACP updates into coherent state
-- **TypeScript-first**: Full type safety with ACP SDK types
+tanstack-acp bridges TanStack AI with the Agent Client Protocol (ACP), an open protocol for communicating with AI agents. The adapter lets you use TanStack AI's `useChat` hook while connecting to any ACP-compatible agent.
 
 ## Installation
 
 ```bash
-npm install tanstack-acp @tanstack/ai-react @tanstack/ai
+npm install tanstack-acp @tanstack/ai @tanstack/ai-react
 # or
-pnpm add tanstack-acp @tanstack/ai-react @tanstack/ai
+pnpm add tanstack-acp @tanstack/ai @tanstack/ai-react
 ```
 
 ## Quick Start
@@ -29,53 +21,33 @@ import { useAcpSession, createAcpAdapter } from 'tanstack-acp'
 import { useChat } from '@tanstack/ai-react'
 
 function App() {
-  // Manage ACP connection and sessions
-  const { 
-    connection, 
-    sessions, 
-    activeSessionId, 
-    createSession,
-    connectionState,
-    pendingPermission,
-    resolvePermission 
-  } = useAcpSession({
+  const { connection, activeSessionId, createSession } = useAcpSession({
     wsUrl: 'ws://localhost:3003',
     autoConnect: true,
   })
 
-  // Use TanStack AI's useChat with ACP adapter
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     connection: createAcpAdapter({
       connection,
-      sessionId: activeSessionId, // null = auto-create
+      sessionId: activeSessionId,
     }),
   })
 
   return (
     <div>
-      {/* Session management UI */}
       <button onClick={() => createSession({ cwd: '/projects' })}>
         New Session
       </button>
-      
-      {/* Chat UI */}
+
       {messages.map(msg => <Message key={msg.id} message={msg} />)}
-      
+
       <form onSubmit={handleSubmit}>
-        <input 
-          value={input} 
+        <input
+          value={input}
           onChange={handleInputChange}
           disabled={isLoading || !activeSessionId}
         />
       </form>
-
-      {/* Permission dialog */}
-      {pendingPermission && (
-        <PermissionDialog 
-          request={pendingPermission}
-          onAllow={(id) => resolvePermission(id, { outcome: 'allow_once' })}
-        />
-      )}
     </div>
   )
 }
@@ -83,49 +55,150 @@ function App() {
 
 ## API Reference
 
-### `useAcpSession(options)`
+### useAcpSession
 
-React hook for managing ACP connection and sessions.
+Manages the ACP connection and session lifecycle.
 
-**Options:**
-- `wsUrl`: WebSocket URL to ACP agent
-- `autoConnect`: Auto-connect on mount (default: true)
-- `reconnectAttempts`: Max reconnection attempts (default: 3)
-- `reconnectDelay`: Delay between reconnections in ms (default: 1000)
-- `cwd`: Default working directory
-- `onConnectionStateChange`: Connection state callback
-- `onPermissionRequest`: Permission request callback
-- `onError`: Error callback
+```tsx
+const {
+  connection,
+  connectionState,
+  isConnected,
+  sessions,
+  activeSessionId,
+  activeSessionData,
+  isLoading,
+  createSession,
+  loadSession,
+  deleteSession,
+  forkSession,
+  duplicateSession,
+  refreshSessions,
+  availableModes,
+  currentModeId,
+  setSessionMode,
+  connect,
+  disconnect,
+  reconnect,
+  pendingPermission,
+  resolvePermission,
+  rejectPermission,
+  persistence,
+  appendMessage,
+} = useAcpSession({
+  wsUrl: string
+  cwd?: string
+  agentName?: string
+  autoConnect?: boolean
+  reconnectAttempts?: number
+  reconnectDelay?: number
+  persistence?: SessionPersistence
+  onLifecycleEvent?: LifecycleCallback
+})
+```
 
-**Returns:**
-- `connection`: AcpConnection instance
-- `connectionState`: { status: 'disconnected' | 'connecting' | 'connected' | 'error', error?: string }
-- `sessions`: Array of active sessions
-- `activeSessionId`: Currently active session ID
-- `createSession(params)`: Create new session
-- `loadSession(sessionId)`: Load existing session
-- `listSessions()`: List all sessions
-- `forkSession(sessionId)`: Fork a session
-- `resumeSession(sessionId)`: Resume a session
-- `setSessionMode(modeId)`: Change session mode
-- `pendingPermission`: Current permission request
-- `resolvePermission(id, response)`: Resolve permission
-- `rejectPermission(id, error)`: Reject permission
+#### Options
 
-### `createAcpAdapter(options)`
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `wsUrl` | `string` | required | WebSocket URL to the ACP agent |
+| `cwd` | `string` | `/tmp` | Default working directory for sessions |
+| `agentName` | `string` | - | Display name for the agent |
+| `autoConnect` | `boolean` | `true` | Auto-connect on mount |
+| `reconnectAttempts` | `number` | `3` | Maximum reconnection attempts |
+| `reconnectDelay` | `number` | `1000` | Delay between reconnections (ms) |
+| `persistence` | `SessionPersistence` | `MemoryPersistence` | Custom persistence layer |
+| `onLifecycleEvent` | `LifecycleCallback` | - | Event callbacks |
 
-Creates a TanStack AI connection adapter.
+#### Return Values
 
-**Options:**
-- `connection`: AcpConnection instance (required)
-- `sessionId`: Session ID to use (null = auto-create)
-- `sessionParams`: { cwd, mcpServers }
-- `onSessionCreated`: Callback when session auto-created
-- `onSessionLoaded`: Callback when session loaded
+**Connection:**
+- `connection: AcpConnection | null` - The ACP connection instance
+- `connectionState: ConnectionState` - Current connection status
+- `isConnected: boolean` - Whether connected
+- `connect() => Promise<void>` - Establish connection
+- `disconnect() => void` - Close connection
+- `reconnect() => Promise<void>` - Re-establish connection
 
-## ACP Protocol Support
+**Sessions:**
+- `sessions: SessionMetadata[]` - List of available sessions
+- `activeSessionId: string | null` - Current session ID
+- `activeSessionData: SessionData | null` - Current session data
+- `isLoading: boolean` - Loading state
+- `createSession(params?) => Promise<NewSessionResponse>` - Create new session
+- `loadSession(sessionId, params?) => Promise<LoadSessionResponse>` - Load existing session
+- `deleteSession(sessionId) => Promise<void>` - Delete a session
+- `forkSession(sessionId) => Promise<ForkSessionResponse>` - Fork a session
+- `duplicateSession(sessionId) => Promise<void>` - Duplicate a session
+- `refreshSessions() => Promise<void>` - Refresh session list
 
-### Session Updates Mapped to TanStack AI StreamChunks
+**Modes:**
+- `availableModes: SessionMode[]` - Available session modes
+- `currentModeId: string | null` - Current mode ID
+- `setSessionMode(modeId) => Promise<SetSessionResponse>` - Change mode
+
+**Permissions:**
+- `pendingPermission: IdentifiedPermissionRequest | null` - Pending permission request
+- `resolvePermission(id, response) => void` - Allow permission
+- `rejectPermission(id, error) => void` - Deny permission
+
+**Persistence:**
+- `persistence: SessionPersistence` - Persistence interface
+- `appendMessage(message) => Promise<void>` - Add message to session
+
+### createAcpAdapter
+
+Creates a TanStack AI connection adapter for ACP.
+
+```tsx
+const adapter = createAcpAdapter({
+  connection: AcpConnection
+  sessionId?: string | null
+  sessionParams?: {
+    cwd?: string
+    mcpServers?: McpServer[]
+  }
+  onSessionCreated?: (sessionId: string) => void
+  onSessionLoaded?: (sessionId: string) => void
+})
+```
+
+Pass the adapter to TanStack AI's `useChat`:
+
+```tsx
+const { messages, input, handleInputChange, handleSubmit } = useChat({
+  connection: adapter,
+})
+```
+
+### AcpConnection
+
+Low-level connection class for direct WebSocket management.
+
+```tsx
+import { AcpConnection } from 'tanstack-acp'
+
+const connection = new AcpConnection({
+  wsUrl: 'ws://localhost:3003',
+  reconnectAttempts: 3,
+  reconnectDelay: 1000,
+  onConnectionStateChange: (state) => console.log(state),
+  onError: (error) => console.error(error),
+})
+
+await connection.connect()
+await connection.initialize()
+await connection.newSession({ cwd: '/tmp' })
+
+// Stream events
+for await (const chunk of connection.streamChunks()) {
+  console.log(chunk)
+}
+```
+
+## ACP Protocol Events
+
+The adapter maps ACP protocol events to TanStack AI stream chunks:
 
 | ACP Event | TanStack AI Chunk |
 |-----------|------------------|
@@ -138,50 +211,93 @@ Creates a TanStack AI connection adapter.
 | `available_commands_update` | `type: 'data'` |
 | `current_mode_update` | `type: 'data'` |
 
-### Supported ACP Methods
+## Persistence
 
-- `initialize` - Protocol handshake
-- `newSession` - Create new session
-- `loadSession` - Load existing session
-- `listSessions` - List all sessions
-- `forkSession` - Fork a session
-- `resumeSession` - Resume a session
-- `setSessionMode` - Change session mode
-- `prompt` - Send message and receive streaming response
-- `cancel` - Cancel ongoing prompt
-- `requestPermission` - Handle tool permission requests
-- `readTextFile` - Read files (optional)
-- `writeTextFile` - Write files (optional)
+The library includes a built-in `MemoryPersistence` for development. For production, implement the `SessionPersistence` interface:
 
-## Demo
+```tsx
+import type { SessionPersistence, SessionMetadata, SessionData } from 'tanstack-acp'
 
-A fully functional demo app is included in the `examples/demo` directory:
+class CustomPersistence implements SessionPersistence {
+  async saveSession(id: string, data: SessionData): Promise<void> {
+    // Save to your storage (localStorage, IndexedDB, database, etc.)
+  }
 
-```bash
-cd examples/demo
-pnpm install
-pnpm dev
+  async getSession(id: string): Promise<SessionData | null> {
+    // Retrieve session
+  }
+
+  async listSessions(): Promise<SessionMetadata[]> {
+    // List all sessions
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    // Delete session
+  }
+
+  // ... other methods
+}
+
+const persistence = new CustomPersistence()
+const { ... } = useAcpSession({ persistence })
 ```
 
-Features:
-- Connect to multiple ACP agents (Claude Code, Gemini, Codex, Custom)
-- Session management (create, load, fork, resume)
-- Real-time chat with tool calls and reasoning
+## Re-exported Types
+
+The library re-exports ACP SDK types for convenience:
+
+```tsx
+import type {
+  NewSessionRequest,
+  LoadSessionRequest,
+  ForkSessionRequest,
+  ResumeSessionRequest,
+  SetSessionModeRequest,
+  RequestPermissionRequest,
+  AgentCapabilities,
+  SessionMode,
+  AvailableCommand,
+  SessionInfo,
+  McpServer,
+  StopReason,
+} from 'tanstack-acp'
+```
+
+## Demo Application
+
+A full-featured demo app is available in `examples/demo/`. It demonstrates:
+- Connecting to multiple ACP agents
+- Session management (create, load, fork, resume, delete)
+- Real-time chat with reasoning and tool calls
 - Permission request handling
-- Slash commands
-- Session mode switching
-- Beautiful UI with Tailwind CSS
+- Mode switching
+
+Run the demo:
+
+```bash
+# Start an ACP agent
+npx -y stdio-to-ws "npx opencode@latest" --port 3000
+
+# Run demo
+pnpm demo
+```
 
 ## Architecture
 
 ```
 Your React App
-    ├── useAcpSession() - Session management
-    │       └── AcpConnection - WebSocket + ACP protocol
-    └── useChat() - TanStack AI
-            └── createAcpAdapter() - Bridge layer
-                    └── AcpConnection.streamChunks()
+├── useAcpSession()          # Connection + session management
+│   └── AcpConnection        # WebSocket + ACP protocol
+└── useChat()                # TanStack AI chat UI
+    └── createAcpAdapter()   # Bridge layer
+        └── streamChunks()   # ACP event stream
 ```
+
+## Requirements
+
+- React 18+
+- TanStack AI 0.3.0+
+- An ACP-compatible agent with WebSocket support
 
 ## License
 
