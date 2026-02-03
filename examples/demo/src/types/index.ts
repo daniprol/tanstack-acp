@@ -57,22 +57,29 @@ export interface UseAcpSessionReturn {
 
 export const AGENT_CONFIGS: AgentConfig[] = [
   {
+    id: 'opencode',
+    name: 'OpenCode',
+    wsUrl: 'ws://localhost:3000',
+    command: 'npx -y stdio-to-ws "npx opencode@latest" --port 3000',
+    description: 'OpenCode agent with full ACP support',
+  },
+  {
     id: 'claude',
-    name: 'Claude Code ACP',
+    name: 'Claude Code',
     wsUrl: 'ws://localhost:3003',
     command: 'npx -y stdio-to-ws "npx @anthropic-ai/claude-code-acp" --port 3003',
     description: 'Anthropic Claude Code with ACP support',
   },
   {
     id: 'gemini',
-    name: 'Gemini CLI ACP',
+    name: 'Gemini CLI',
     wsUrl: 'ws://localhost:3004',
     command: 'npx -y stdio-to-ws "npx @google/gemini-cli@latest --experimental-acp" --port 3004',
     description: 'Google Gemini CLI with ACP support',
   },
   {
     id: 'codex',
-    name: 'Codex ACP',
+    name: 'Codex',
     wsUrl: 'ws://localhost:3005',
     command: 'npx -y stdio-to-ws "npx @anthropic-ai/codex-acp" --port 3005',
     description: 'OpenAI Codex with ACP support',

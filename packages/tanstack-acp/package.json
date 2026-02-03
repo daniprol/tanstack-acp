@@ -25,7 +25,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "file:../../../typescript-sdk"
+    "@agentclientprotocol/sdk": "^0.13.0"
   },
   "peerDependencies": {
     "@tanstack/ai": "^0.3.0",
