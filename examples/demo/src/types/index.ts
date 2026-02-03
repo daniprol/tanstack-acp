@@ -1,7 +1,18 @@
-import type { Session, IdentifiedPermissionRequest } from 'tanstack-acp';
-import type { RequestPermissionResponse, SessionMode, AvailableCommand, AgentCapabilities } from '@agentclientprotocol/sdk';
+import type { UIMessage } from '@tanstack/ai';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+// SDK types - using any to avoid resolution issues
+export type SessionMode = {
+  id: string;
+  name: string;
+  description?: string | null;
+};
+
+export type AvailableCommand = {
+  name: string;
+  description?: string;
+};
 
 export interface ConnectionState {
   status: ConnectionStatus;
@@ -17,42 +28,28 @@ export interface AgentConfig {
   description: string;
 }
 
-export interface AppSession extends Session {
+export interface SessionMetadata {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+  messageCount: number;
   agentName?: string;
+  wsUrl?: string;
+  modeId?: string | null;
+  modelId?: string;
+  lastMessagePreview?: string;
 }
 
-export interface UseAcpSessionReturn {
-  // Connection
-  connection: import('tanstack-acp').AcpConnection | null;
-  
-  // Connection state
-  connectionState: ConnectionState;
-  isConnected: boolean;
-  
-  // Session data
-  sessions: AppSession[];
-  activeSessionId: string | null;
-  setActiveSessionId: (sessionId: string | null) => void;
-  agentCapabilities: AgentCapabilities | null;
-  availableCommands: AvailableCommand[];
-  currentModeId: string | null;
-  availableModes: SessionMode[];
-  
-  // Session actions
-  createSession: (params?: { cwd?: string; mcpServers?: unknown[] }) => Promise<import('@agentclientprotocol/sdk').NewSessionResponse>;
-  loadSession: (sessionId: string, params?: { cwd?: string }) => Promise<import('@agentclientprotocol/sdk').LoadSessionResponse>;
-  forkSession: (sessionId: string) => Promise<import('@agentclientprotocol/sdk').ForkSessionResponse>;
-  setSessionMode: (modeId: string) => Promise<import('@agentclientprotocol/sdk').SetSessionModeResponse>;
-  
-  // Connection actions
-  connect: () => Promise<void>;
-  disconnect: () => void;
-  reconnect: () => Promise<void>;
-  
-  // Permission handling
-  pendingPermission: IdentifiedPermissionRequest | null;
-  resolvePermission: (permissionId: string, response: RequestPermissionResponse) => void;
-  rejectPermission: (permissionId: string, error: Error) => void;
+export interface SessionData extends SessionMetadata {
+  messages: UIMessage[];
+}
+
+export interface GroupedSessions {
+  today: SessionMetadata[];
+  yesterday: SessionMetadata[];
+  last7Days: SessionMetadata[];
+  older: SessionMetadata[];
 }
 
 export const AGENT_CONFIGS: AgentConfig[] = [
@@ -91,4 +88,12 @@ export const AGENT_CONFIGS: AgentConfig[] = [
     command: 'Your custom agent command',
     description: 'Connect to any custom ACP agent',
   },
+];
+
+export const MODEL_OPTIONS = [
+  { id: 'default', name: 'Default', description: 'Standard balanced model' },
+  { id: 'fast', name: 'Fast', description: 'Quick responses, good for simple tasks' },
+  { id: 'powerful', name: 'Powerful', description: 'Best for complex reasoning' },
+  { id: 'creative', name: 'Creative', description: 'More imaginative responses' },
+  { id: 'precise', name: 'Precise', description: 'Accurate and factual' },
 ];

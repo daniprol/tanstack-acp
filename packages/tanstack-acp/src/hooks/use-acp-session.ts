@@ -108,19 +108,24 @@ export function useAcpSession(options: AcpSessionOptions): AcpSessionReturn {
     }
 
     try {
-      await conn.connect()
-      await conn.initialize()
-      setConnection(conn)
-      lifecycleCallbacks?.onConnectionStateChange?.({ status: 'connected', url: options.wsUrl })
-    } catch (error) {
-      lifecycleCallbacks?.onConnectionStateChange?.({ 
-        status: 'error', 
-        url: options.wsUrl,
-        error: error instanceof Error ? error.message : String(error)
-      })
-      throw error
-    }
-  }, [options.wsUrl, options.reconnectAttempts, options.reconnectDelay, persistence, lifecycleCallbacks])
+        await conn.connect()
+        await conn.initialize()
+        setConnection(conn)
+        lifecycleCallbacks?.onConnectionStateChange?.({ status: 'connected', url: options.wsUrl })
+      } catch (error) {
+        setConnectionState({
+          status: 'error',
+          url: options.wsUrl,
+          error: error instanceof Error ? error.message : String(error)
+        })
+        lifecycleCallbacks?.onConnectionStateChange?.({
+          status: 'error',
+          url: options.wsUrl,
+          error: error instanceof Error ? error.message : String(error)
+        })
+        throw error
+      }
+    }, [options.wsUrl, options.reconnectAttempts, options.reconnectDelay, persistence, lifecycleCallbacks])
 
   const disconnect = useCallback(() => {
     connection?.disconnect()
@@ -139,7 +144,10 @@ export function useAcpSession(options: AcpSessionOptions): AcpSessionReturn {
   // Session actions
   const createSession = useCallback(
     async (params?: Partial<NewSessionRequest>) => {
-      if (!connection) throw new Error('Not connected')
+      if (!connection) {
+        console.error('createSession called but connection is null', { connectionState })
+        throw new Error('Not connected to agent. Please make sure you are connected first.')
+      }
       
       lifecycleCallbacks?.onSessionCreateStart?.()
       setIsLoading(true)
